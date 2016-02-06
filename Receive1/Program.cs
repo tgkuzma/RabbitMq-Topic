@@ -9,6 +9,9 @@ namespace Receive1
     {
         private static void Main(string[] args)
         {
+            Console.WriteLine("----------Receiver (ALL HAPPY MESSAGES)----------");
+            Console.WriteLine("Press [Enter] to exit.");
+
             var factory = new ConnectionFactory() { HostName = "localhost" };
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
@@ -16,24 +19,11 @@ namespace Receive1
                 channel.ExchangeDeclare(exchange: "topic_example", type: "topic");
                 var queueName = channel.QueueDeclare().QueueName;
 
-                if (args.Length < 1)
-                {
-                    Console.Error.WriteLine("Usage: {0} [binding_key...]",
-                                            Environment.GetCommandLineArgs()[0]);
-                    Console.WriteLine(" Press [enter] to exit.");
-                    Console.ReadLine();
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                channel.QueueBind(queue: queueName,
+                                  exchange: "topic_example",
+                                  routingKey: "Happy.*");
 
-                foreach (var bindingKey in args)
-                {
-                    channel.QueueBind(queue: queueName,
-                                      exchange: "topic_example",
-                                      routingKey: bindingKey);
-                }
-
-                Console.WriteLine(" [*] Waiting for messages. To exit press CTRL+C");
+                Console.WriteLine("Waiting for messages...");
 
                 var consumer = new EventingBasicConsumer(channel);
                 consumer.Received += (model, ea) =>
@@ -41,7 +31,7 @@ namespace Receive1
                     var body = ea.Body;
                     var message = Encoding.UTF8.GetString(body);
                     var routingKey = ea.RoutingKey;
-                    Console.WriteLine(" [x] Received '{0}':'{1}'",
+                    Console.WriteLine(" Received '{0}':'{1}'",
                                       routingKey,
                                       message);
                 };
@@ -49,7 +39,6 @@ namespace Receive1
                                      noAck: true,
                                      consumer: consumer);
 
-                Console.WriteLine(" Press [enter] to exit.");
                 Console.ReadLine();
             }
         }
